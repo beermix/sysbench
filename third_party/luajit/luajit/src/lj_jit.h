@@ -450,11 +450,7 @@ typedef struct jit_State {
 
   HotPenalty penalty[PENALTY_SLOTS];  /* Penalty slots. */
   uint32_t penaltyslot;	/* Round-robin index into penalty slots. */
-  uint64_t prngstate;	/* PRNG state. */
-
-  uintptr_t target; /* target address for mcode_alloc() */
-  uintptr_t range;  /* allocation range for mcode_alloc() */
-  uintptr_t allocbase; /* allocation base addred for mcode_alloc() */
+  uint32_t prngstate;	/* PRNG state. */
 
 #ifdef LUAJIT_ENABLE_TABLE_BUMP
   RBCHashEntry rbchash[RBCHASH_SLOTS];  /* Reverse bytecode map. */
@@ -492,13 +488,12 @@ LJ_ALIGN(16)		/* For DISPATCH-relative addresses in assembler part. */
 #endif
 jit_State;
 
-/* SplitMix64 PRNG based on http://xoroshiro.di.unimi.it/splitmix64.c */
+/* Trivial PRNG e.g. used for penalty randomization. */
 static LJ_AINLINE uint32_t LJ_PRNG_BITS(jit_State *J, int bits)
 {
-  uint64_t z = (J->prngstate += UINT64_C(0x9E3779B97F4A7C15));
-  z = (z ^ (z >> 30)) * UINT64_C(0xBF58476D1CE4E5B9);
-  z = (z ^ (z >> 27)) * UINT64_C(0x94D049BB133111EB);
-  return z >> (64-bits);
+  /* Yes, this LCG is very weak, but that doesn't matter for our use case. */
+  J->prngstate = J->prngstate * 1103515245 + 12345;
+  return J->prngstate >> (32-bits);
 }
 
 #endif
